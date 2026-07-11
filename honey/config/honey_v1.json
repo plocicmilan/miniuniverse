@@ -1,0 +1,11 @@
+{
+  "app": "honey",
+  "name": "Honey Toolbox",
+  "tagline": "Pčelinjak u džepu",
+  "version": "0.1.0",
+  "currency": "RSD",
+  "lang": "sr",
+  "honey_types": ["Livadski", "Bagreni", "Suncokretov", "Mešani", "Drugi"],
+  "hive_types": ["LR", "DB", "Farrar", "Dadant", "Drugi"],
+  "jar_sizes": ["0.25 kg", "0.5 kg", "0.7 kg", "1 kg", "Drugo"]
+}
