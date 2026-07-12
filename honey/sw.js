@@ -1,7 +1,7 @@
 /* Honey Toolbox — service worker (cache-first, offline) */
 "use strict";
 
-var CACHE = "honey-toolbox-v0.9.0";
+var CACHE = "honey-toolbox-v0.9.1";
 
 var PRECACHE = [
   "index.html",

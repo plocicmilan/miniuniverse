@@ -19,6 +19,7 @@ var App = {
   _nuclei: [],
   _queen_rearing: [],
   _winterization: [],
+  _expenses: [],
   _activeApiary: "",   // "" = svi pčelinjaci
   _cfg: null,
   _filter: { honey_type: "", date_from: "", date_to: "", min_kg: "" }
@@ -122,7 +123,7 @@ var SWARM_OUTCOMES = [
   { key: "lost",      label: "Izgubljen ❌" }
 ];
 
-var ALL_STORES = ["hives","inspections","extractions","inventory","sales","stocks","apiaries","produce","treatments","swarms","feedings","varroa_checks","nuclei","queen_rearing","winterization"];
+var ALL_STORES = ["hives","inspections","extractions","inventory","sales","stocks","apiaries","produce","treatments","swarms","feedings","varroa_checks","nuclei","queen_rearing","winterization","expenses"];
 
 var FEED_TYPES = [
   "Šećerni sirup 1:1 (prolećni)",
@@ -1497,6 +1498,7 @@ SCREENS.tezga = function () {
   var stockRows = stocks.map(function (s) {
     return '<div class="inv-row" onclick="GT.go(\'stock_form\',{id:\'' + s.id + '\'})" style="cursor:pointer">' +
       '<div>' +
+        (s.kanta_id ? '<span class="badge badge-muted" style="font-size:.7rem;margin-right:.3rem">' + esc(s.kanta_id) + '</span>' : '') +
         '<span class="inv-type">' + esc(s.honey_type || '—') + '</span>' +
         (s.date ? '<span class="muted" style="font-size:.78rem;margin-left:.4rem">' + fmtDate(s.date) + '</span>' : '') +
         (s.notes ? '<div class="muted" style="font-size:.78rem">' + esc(s.notes) + '</div>' : '') +
@@ -1631,6 +1633,34 @@ SCREENS.tezga = function () {
         (prod.length > 6 ? '<p class="muted" style="font-size:.8rem;text-align:right;margin-top:.3rem;cursor:pointer" onclick="GT.nav(\'produce_list\')">Prikaži sve (' + prod.length + ') →</p>' : '') +
       '</div>';
     })() +
+    (function () {
+      var cfg = App._cfg || {};
+      var cur = cfg.currency || "RSD";
+      var exps = App._expenses.slice().sort(function (a,b) { return (b.date||'') > (a.date||'') ? 1 : -1; });
+      var totalExp = exps.reduce(function (s, x) { return s + (Number(x.total) || 0); }, 0);
+      var rows = exps.slice(0,8).map(function (e) {
+        return '<div class="hist-row" onclick="GT.go(\'expense_form\',{id:\'' + e.id + '\'})" style="cursor:pointer">' +
+          '<div class="hist-date">' + fmtDate(e.date) + '</div>' +
+          '<div class="hist-body">' + esc(e.name || '—') +
+            (e.quantity && e.price ? ' · ' + e.quantity + ' × ' + fmtNum(e.price) + ' ' + cur : '') +
+            '<br><b>' + fmtNum(e.total || 0) + ' ' + cur + '</b>' +
+            (e.notes ? '<br><small class="muted">' + esc(e.notes) + '</small>' : '') +
+          '</div>' +
+        '</div>';
+      }).join('') || '<p class="muted">Nema unetih troškova.</p>';
+      return '<div class="section-card" style="margin-top:.65rem">' +
+        '<div class="section-header">' +
+          '<span class="section-title" style="margin:0">📋 Troškovi</span>' +
+          '<div style="display:flex;gap:.4rem">' +
+            '<button class="btn btn-secondary btn-sm" onclick="GT.importXLSX(\'expenses\')">📥 Excel</button>' +
+            '<button class="btn btn-secondary btn-sm" onclick="GT.go(\'expense_form\',{})">+ Unos</button>' +
+          '</div>' +
+        '</div>' +
+        (exps.length ? '<div class="type-chips"><span class="type-chip">Ukupno ' + fmtNum(Math.round(totalExp)) + ' ' + cur + '</span></div>' : '') +
+        rows +
+        (exps.length > 8 ? '<p class="muted" style="font-size:.8rem;text-align:right;margin-top:.3rem">... još ' + (exps.length - 8) + ' stavki</p>' : '') +
+      '</div>';
+    })() +
   '</div>';
 };
 
@@ -1645,6 +1675,8 @@ SCREENS.stock_form = function (p) {
   return '<div class="form-screen">' +
     '<h2>' + (h.id ? 'Izmeni kantu' : 'Nova kanta') + '</h2>' +
     (h.id ? '<input type="hidden" id="stf_id" value="' + esc(h.id) + '">' : '') +
+    '<label>Broj / oznaka kante</label>' +
+    '<input id="stf_kanta_id" type="text" placeholder="npr. K-1, 6, xx" value="' + esc(h.kanta_id || '') + '">' +
     '<label>Tip meda*</label>' +
     '<select id="stf_type"><option value="">— izaberi —</option>' + htypes + '</select>' +
     '<label>Kilogrami*</label>' +
@@ -1656,6 +1688,33 @@ SCREENS.stock_form = function (p) {
     '<div class="btn-row mt8">' +
       '<button class="btn btn-primary" onclick="GT.saveStock()">Sačuvaj</button>' +
       (h.id ? '<button class="btn btn-danger" onclick="GT.deleteStock(\'' + h.id + '\')">Obriši</button>' : '') +
+    '</div>' +
+  '</div>';
+};
+
+SCREENS.expense_form = function (p) {
+  var h = p.id ? App._expenses.find(function (x) { return x.id === p.id; }) : {};
+  h = h || {};
+  var cfg = App._cfg || {};
+  var cur = cfg.currency || "RSD";
+  return '<div class="form-screen">' +
+    '<h2>' + (h.id ? 'Izmeni trošak' : 'Novi trošak') + '</h2>' +
+    (h.id ? '<input type="hidden" id="exf_id" value="' + esc(h.id) + '">' : '') +
+    '<label>Datum*</label>' +
+    '<input id="exf_date" type="date" value="' + (h.date || new Date().toISOString().slice(0,10)) + '">' +
+    '<label>Naziv*</label>' +
+    '<input id="exf_name" type="text" placeholder="npr. Šećer, Tegle 0.5kg..." value="' + esc(h.name || '') + '">' +
+    '<label>Količina</label>' +
+    '<input id="exf_qty" type="number" step="0.01" min="0" placeholder="npr. 100" value="' + esc(h.quantity || '') + '">' +
+    '<label>Cena / jed. (' + cur + ')</label>' +
+    '<input id="exf_price" type="number" step="1" min="0" placeholder="npr. 95" value="' + esc(h.price || '') + '" oninput="GT.calcExpTotal()">' +
+    '<label>Ukupno (' + cur + ')*</label>' +
+    '<input id="exf_total" type="number" step="1" min="0" placeholder="npr. 9500" value="' + esc(h.total || '') + '">' +
+    '<label>Napomena</label>' +
+    '<textarea id="exf_notes" rows="2">' + esc(h.notes || '') + '</textarea>' +
+    '<div class="btn-row mt8">' +
+      '<button class="btn btn-primary" onclick="GT.saveExpense()">Sačuvaj</button>' +
+      (h.id ? '<button class="btn btn-danger" onclick="GT.deleteExpense(\'' + h.id + '\')">Obriši</button>' : '') +
     '</div>' +
   '</div>';
 };
@@ -1797,7 +1856,7 @@ GT.back = function () {
   var backMap = {
     hive_detail: "hives", hive_form: "hives",
     inspection_form: "hives", extraction_form: "extractions",
-    inventory_form: "tezga", sale_form: "tezga", stock_form: "tezga",
+    inventory_form: "tezga", sale_form: "tezga", stock_form: "tezga", expense_form: "tezga",
     produce_list: "tezga", produce_form: "tezga",
     extractions: "evidencija", extraction_form: "extractions",
     treatments: "evidencija", treatment_form: "treatments",
@@ -2293,6 +2352,7 @@ GT.saveStock = function () {
   var idEl = document.getElementById("stf_id");
   var obj = {
     id:         idEl ? idEl.value : undefined,
+    kanta_id:   (document.getElementById("stf_kanta_id") || {}).value || "",
     honey_type: type,
     kg:         kg,
     date:       date,
@@ -2304,6 +2364,39 @@ GT.saveStock = function () {
 GT.deleteStock = function (id) {
   if (!confirm("Obrisati unos kante?")) return;
   HStore.del("stocks", id).then(function () { GT.nav("tezga"); });
+};
+
+GT.calcExpTotal = function () {
+  var qty   = parseFloat((document.getElementById("exf_qty") || {}).value) || 0;
+  var price = parseFloat((document.getElementById("exf_price") || {}).value) || 0;
+  if (qty && price) {
+    var totEl = document.getElementById("exf_total");
+    if (totEl) totEl.value = Math.round(qty * price);
+  }
+};
+
+GT.saveExpense = function () {
+  var name  = (document.getElementById("exf_name") || {}).value || "";
+  var total = parseFloat((document.getElementById("exf_total") || {}).value) || 0;
+  var date  = (document.getElementById("exf_date") || {}).value || "";
+  if (!name)  { alert("Unesi naziv troška."); return; }
+  if (!total) { alert("Unesi ukupan iznos."); return; }
+  var idEl = document.getElementById("exf_id");
+  var obj = {
+    id:       idEl ? idEl.value : undefined,
+    date:     date,
+    name:     name,
+    quantity: parseFloat((document.getElementById("exf_qty") || {}).value) || 0,
+    price:    parseFloat((document.getElementById("exf_price") || {}).value) || 0,
+    total:    total,
+    notes:    (document.getElementById("exf_notes") || {}).value || ""
+  };
+  HStore.save("expenses", obj).then(function () { GT.nav("tezga"); });
+};
+
+GT.deleteExpense = function (id) {
+  if (!confirm("Obrisati trošak?")) return;
+  HStore.del("expenses", id).then(function () { GT.nav("tezga"); });
 };
 
 GT.setFilter = function (key, val) {
@@ -2327,30 +2420,86 @@ GT.importXLSX = function (storeType) {
     reader.onload = function (e) {
       try {
         var wb = XLSX.read(e.target.result, { type: "array", cellDates: true });
-        var ws = wb.Sheets[wb.SheetNames[0]];
+        // For expenses: try "troskovi" sheet first
+        var sheetName = wb.SheetNames[0];
+        if (storeType === "expenses") {
+          var troskSheet = wb.SheetNames.find(function (n) { return n.toLowerCase().indexOf("tro") === 0; });
+          if (troskSheet) sheetName = troskSheet;
+        }
+        // For stocks: try "medara" sheet first
+        if (storeType === "stocks") {
+          var medaraSheet = wb.SheetNames.find(function (n) { return n.toLowerCase() === "medara"; });
+          if (medaraSheet) sheetName = medaraSheet;
+        }
+        var ws = wb.Sheets[sheetName];
         var rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
         if (!rows.length) { alert("Fajl je prazan."); return; }
 
         var saves = [];
         var skipped = 0;
 
+        function parseSrbDate(val) {
+          if (!val) return "";
+          if (val instanceof Date) return val.toISOString().slice(0,10);
+          var s = String(val).trim();
+          // DD.MM.YYYY. or DD.MM.YYYY
+          var m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+          if (m) return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
+          var d = new Date(val);
+          return isNaN(d) ? "" : d.toISOString().slice(0,10);
+        }
+
         if (storeType === "stocks") {
-          // Expected columns: Tip meda | Kg | Datum | Napomena
+          // Auto-detect Nikola's medara format by checking headers
+          var firstRowKeys = Object.keys(rows[0] || {}).map(function (k) { return k.toLowerCase(); });
+          var isMedaraFmt = firstRowKeys.indexOf("vrsta meda") >= 0 || firstRowKeys.indexOf("broj kante") >= 0;
+
+          if (isMedaraFmt) {
+            // Nikola's medara sheet: broj kante | datum zadnje promene | vrsta meda | datum vrcanja | opis | kolicina
+            rows.forEach(function (r) {
+              var type = String(r["vrsta meda"] || r["Vrsta meda"] || "").trim().toLowerCase();
+              var kg   = parseFloat(r["kolicina"] || r["Kolicina"] || r["količina"] || r["Količina"] || 0);
+              if (!type || type === "prazno" || !kg) { skipped++; return; }
+              var kantaId = String(r["broj kante"] || r["Broj kante"] || "").trim();
+              var dateStr = parseSrbDate(r["datum zadnje promene"] || r["Datum zadnje promene"] || "");
+              var godVrc  = String(r["datum vrcanja"] || r["Datum vrcanja"] || "").trim();
+              var opis    = String(r["opis"] || r["Opis"] || "").trim();
+              var notes   = (godVrc ? "Vrčanje: " + godVrc + ". " : "") + opis;
+              // Capitalize honey type
+              var honeyType = type.charAt(0).toUpperCase() + type.slice(1);
+              saves.push(HStore.save("stocks", {
+                kanta_id: kantaId, honey_type: honeyType, kg: kg, date: dateStr, notes: notes.trim()
+              }));
+            });
+          } else {
+            // Standard format: Tip meda | Kg | Datum | Napomena
+            rows.forEach(function (r) {
+              var type = String(r["Tip meda"] || r["tip meda"] || r["honey_type"] || "").trim();
+              var kg   = parseFloat(r["Kg"] || r["kg"] || r["KG"] || 0);
+              if (!type || !kg) { skipped++; return; }
+              saves.push(HStore.save("stocks", {
+                honey_type: type, kg: kg,
+                date: parseSrbDate(r["Datum"] || r["datum"] || r["date"] || ""),
+                notes: String(r["Napomena"] || r["napomena"] || r["notes"] || "").trim()
+              }));
+            });
+          }
+        } else if (storeType === "expenses") {
+          // Nikola's troskovi sheet: datum | naziv | kolicina | cena | ukupno | opis
           rows.forEach(function (r) {
-            var type = String(r["Tip meda"] || r["tip meda"] || r["honey_type"] || "").trim();
-            var kg   = parseFloat(r["Kg"] || r["kg"] || r["KG"] || 0);
-            if (!type || !kg) { skipped++; return; }
-            var dateVal = r["Datum"] || r["datum"] || r["date"] || "";
-            var dateStr = "";
-            if (dateVal instanceof Date) {
-              dateStr = dateVal.toISOString().slice(0,10);
-            } else if (dateVal) {
-              var d = new Date(dateVal);
-              dateStr = isNaN(d) ? "" : d.toISOString().slice(0,10);
-            }
-            saves.push(HStore.save("stocks", {
-              honey_type: type, kg: kg, date: dateStr,
-              notes: String(r["Napomena"] || r["napomena"] || r["notes"] || "").trim()
+            var name  = String(r["naziv"] || r["Naziv"] || "").trim();
+            var total = parseFloat(r["ukupno"] || r["Ukupno"] || 0);
+            if (!name && !total) { skipped++; return; }
+            var qty   = parseFloat(r["kolicina"] || r["Kolicina"] || r["količina"] || r["Količina"] || 0);
+            var price = parseFloat(r["cena"] || r["Cena"] || r["cijena"] || 0);
+            if (!total && qty && price) total = Math.round(qty * price);
+            saves.push(HStore.save("expenses", {
+              date:     parseSrbDate(r["datum"] || r["Datum"] || ""),
+              name:     name,
+              quantity: qty,
+              price:    price,
+              total:    total,
+              notes:    String(r["opis"] || r["Opis"] || "").trim()
             }));
           });
         } else {
@@ -2547,7 +2696,8 @@ var TOP_SCREEN = {
   nuclei: false, nucleus_form: false,
   queen_rearing: false, queen_form: false,
   winterization: false, winterization_form: false,
-  inventory_form: false, sale_form: false, stock_form: false
+  inventory_form: false, sale_form: false, stock_form: false,
+  expense_form: false
 };
 
 var EVIDENCIJA_SCREENS = {
@@ -2579,7 +2729,7 @@ function renderHeader() {
     extractions: "Berba", tezga: "Tezga", settings: "Podešavanja",
     hive_detail: "Karton košnice", hive_form: "Košnica",
     inspection_form: "Inspekcija", extraction_form: "Berba",
-    inventory_form: "Tegle — unos", sale_form: "Prodaja", stock_form: "Kanta — unos",
+    inventory_form: "Tegle — unos", sale_form: "Prodaja", stock_form: "Kanta — unos", expense_form: "Trošak",
     analytics: "Analitika", apiaries: "Pčelinjaci", apiary_form: "Pčelinjak",
     produce_list: "Ostali proizvodi", produce_form: "Proizvod",
     treatments: "Tretmani", treatment_form: "Tretman",
@@ -2625,7 +2775,8 @@ function loadData() {
     HStore.all("varroa_checks"),
     HStore.all("nuclei"),
     HStore.all("queen_rearing"),
-    HStore.all("winterization")
+    HStore.all("winterization"),
+    HStore.all("expenses")
   ]).then(function (results) {
     App._hives          = results[0];
     App._inspections    = results[1];
@@ -2642,6 +2793,7 @@ function loadData() {
     App._nuclei         = results[12];
     App._queen_rearing  = results[13];
     App._winterization  = results[14];
+    App._expenses       = results[15];
   });
 }
 

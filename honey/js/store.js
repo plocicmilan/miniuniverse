@@ -3,7 +3,7 @@
 
 var HStore = (function () {
   var DB_NAME = "honey-toolbox";
-  var DB_VERSION = 6;
+  var DB_VERSION = 7;
   var _db = null;
 
   var STORES = {
@@ -12,7 +12,7 @@ var HStore = (function () {
     extractions:   { keyPath: "id", indexes: ["date"] },
     inventory:     { keyPath: "id", indexes: ["honey_type"] },
     sales:         { keyPath: "id", indexes: ["date"] },
-    stocks:        { keyPath: "id", indexes: ["honey_type", "date"] },
+    stocks:        { keyPath: "id", indexes: ["honey_type", "date", "kanta_id"] },
     apiaries:      { keyPath: "id", indexes: [] },
     produce:       { keyPath: "id", indexes: ["product_type", "date"] },
     treatments:    { keyPath: "id", indexes: ["hive_id", "start_date"] },
@@ -21,7 +21,8 @@ var HStore = (function () {
     varroa_checks: { keyPath: "id", indexes: ["hive_id", "date"] },
     nuclei:        { keyPath: "id", indexes: ["date"] },
     queen_rearing: { keyPath: "id", indexes: ["grafting_date"] },
-    winterization: { keyPath: "id", indexes: ["year"] }
+    winterization: { keyPath: "id", indexes: ["year"] },
+    expenses:      { keyPath: "id", indexes: ["date"] }
   };
 
   function open() {
