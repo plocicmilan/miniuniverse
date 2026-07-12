@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#2E5C8A">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="WO Snap">
+  <title>Work Order Snap</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/app.css">
+  <!-- jsPDF (client-side PDF, ~200KB) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ── SCREEN: Home ──────────────────────────────────────── -->
+<div id="screen-home" class="screen">
+  <header class="app-header">
+    <div>
+      <h1>Work Order Snap</h1>
+      <div class="subtitle">by Tradesman's Playbook</div>
+    </div>
+  </header>
+
+  <div class="home-logo">
+    <h2>Quick Work Orders</h2>
+    <p>Photo + GPS + PDF — right from your phone</p>
+  </div>
+
+  <button id="btn-new-order" class="btn btn-primary">+ New Work Order</button>
+  <button id="btn-list" class="btn btn-secondary">View All Orders</button>
+</div>
+
+<!-- ── SCREEN: New Order ─────────────────────────────────── -->
+<div id="screen-new" class="screen hidden">
+  <header class="app-header">
+    <button class="btn-back" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">&#8592;</button>
+    <div><h1>New Work Order</h1></div>
+  </header>
+
+  <div class="screen-form">
+    <div class="field">
+      <label>Trade</label>
+      <select id="f-trade">
+        <option value="plumber">Plumbing</option>
+        <option value="hvac">HVAC</option>
+        <option value="electrician">Electrical</option>
+        <option value="roofer">Roofing</option>
+        <option value="handyman">Handyman</option>
+      </select>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <div class="field" style="flex:1">
+        <label>Job #</label>
+        <input id="f-job-number" type="text" readonly style="background:#f5f7fa;color:#6b7280">
+      </div>
+      <div class="field" style="flex:1">
+        <label>Date</label>
+        <input id="f-date" type="date">
+      </div>
+      <div class="field" style="flex:0 0 80px">
+        <label>Time</label>
+        <input id="f-time" type="time">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Customer Name <span style="font-weight:400;text-transform:none">(optional)</span></label>
+      <input id="f-customer" type="text" placeholder="John Smith">
+    </div>
+
+    <div class="field">
+      <label>Service Address <span style="font-weight:400;text-transform:none">(auto-filled from GPS)</span></label>
+      <input id="f-address" type="text" placeholder="Detecting location...">
+    </div>
+
+    <div class="field">
+      <label>Description of Work *</label>
+      <textarea id="f-description" placeholder="Describe what was done..."></textarea>
+    </div>
+
+    <!-- Foto sekcija -->
+    <div class="photo-section">
+      <div class="photo-label-row">
+        <label>Photos</label>
+      </div>
+      <!-- input type file sa capture="environment" — otvara kameru direktno -->
+      <label class="btn-photo">
+        📷 Take Photo / Add from Gallery
+        <input id="photo-input" type="file" accept="image/*" capture="environment"
+               multiple style="display:none">
+      </label>
+      <div id="photo-preview"></div>
+    </div>
+
+    <button id="btn-save-order" class="btn btn-primary">Save Work Order</button>
+    <button class="btn-back btn btn-outline">Cancel</button>
+  </div>
+</div>
+
+<!-- ── SCREEN: List ──────────────────────────────────────── -->
+<div id="screen-list" class="screen hidden">
+  <header class="app-header">
+    <button class="btn-back" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">&#8592;</button>
+    <div><h1>All Work Orders</h1></div>
+  </header>
+  <div id="list-container"></div>
+</div>
+
+<!-- ── SCREEN: Detail ────────────────────────────────────── -->
+<div id="screen-detail" class="screen hidden">
+  <header class="app-header">
+    <button class="btn-back" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">&#8592;</button>
+    <div>
+      <h1 id="detail-job-number">—</h1>
+      <div class="subtitle" id="detail-trade">—</div>
+    </div>
+  </header>
+
+  <div style="padding:16px;display:flex;flex-direction:column;gap:14px;">
+    <div class="detail-field">
+      <span class="label">Date / Time</span>
+      <span class="value" id="detail-date">—</span>
+    </div>
+    <div class="detail-field">
+      <span class="label">Customer</span>
+      <span class="value" id="detail-customer">—</span>
+    </div>
+    <div class="detail-field">
+      <span class="label">Service Address</span>
+      <span class="value" id="detail-address">—</span>
+    </div>
+    <div class="detail-field">
+      <span class="label">Description of Work</span>
+      <span class="value" id="detail-desc">—</span>
+    </div>
+    <div class="detail-field">
+      <span class="label">Photos</span>
+      <div id="detail-gallery"></div>
+    </div>
+
+    <div class="action-row">
+      <button id="btn-export-pdf" class="btn btn-primary">Export PDF</button>
+      <button id="btn-delete" class="btn btn-danger">Delete</button>
+    </div>
+
+    <p style="font-size:11px;color:#6b7280;text-align:center;margin-top:4px;">
+      PDF will be downloaded to your device
+    </p>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
