@@ -3,15 +3,25 @@
 
 var HStore = (function () {
   var DB_NAME = "honey-toolbox";
-  var DB_VERSION = 1;
+  var DB_VERSION = 6;
   var _db = null;
 
   var STORES = {
-    hives:       { keyPath: "id", indexes: ["status"] },
-    inspections: { keyPath: "id", indexes: ["hive_id", "date"] },
-    extractions: { keyPath: "id", indexes: ["date"] },
-    inventory:   { keyPath: "id", indexes: ["honey_type"] },
-    sales:       { keyPath: "id", indexes: ["date"] }
+    hives:         { keyPath: "id", indexes: ["status", "apiary_id"] },
+    inspections:   { keyPath: "id", indexes: ["hive_id", "date"] },
+    extractions:   { keyPath: "id", indexes: ["date"] },
+    inventory:     { keyPath: "id", indexes: ["honey_type"] },
+    sales:         { keyPath: "id", indexes: ["date"] },
+    stocks:        { keyPath: "id", indexes: ["honey_type", "date"] },
+    apiaries:      { keyPath: "id", indexes: [] },
+    produce:       { keyPath: "id", indexes: ["product_type", "date"] },
+    treatments:    { keyPath: "id", indexes: ["hive_id", "start_date"] },
+    swarms:        { keyPath: "id", indexes: ["hive_id", "date"] },
+    feedings:      { keyPath: "id", indexes: ["date"] },
+    varroa_checks: { keyPath: "id", indexes: ["hive_id", "date"] },
+    nuclei:        { keyPath: "id", indexes: ["date"] },
+    queen_rearing: { keyPath: "id", indexes: ["grafting_date"] },
+    winterization: { keyPath: "id", indexes: ["year"] }
   };
 
   function open() {
@@ -76,6 +86,28 @@ var HStore = (function () {
     });
   }
 
+  function clear(store) {
+    return open().then(function (d) {
+      return new Promise(function (res, rej) {
+        var req = d.transaction(store, "readwrite").objectStore(store).clear();
+        req.onsuccess = function () { res(); };
+        req.onerror   = function () { rej(req.error); };
+      });
+    });
+  }
+
+  function bulkSave(store, items) {
+    return open().then(function (d) {
+      return new Promise(function (res, rej) {
+        var tx = d.transaction(store, "readwrite");
+        var os = tx.objectStore(store);
+        items.forEach(function (item) { os.put(item); });
+        tx.oncomplete = function () { res(); };
+        tx.onerror    = function () { rej(tx.error); };
+      });
+    });
+  }
+
   function byIndex(store, idx, val) {
     return open().then(function (d) {
       return new Promise(function (res, rej) {
@@ -94,5 +126,5 @@ var HStore = (function () {
     set: function (k, v) { localStorage.setItem("ht_" + k, JSON.stringify(v)); }
   };
 
-  return { uid: uid, all: all, get: get, save: save, del: del, byIndex: byIndex, settings: settings };
+  return { uid: uid, all: all, get: get, save: save, del: del, clear: clear, bulkSave: bulkSave, byIndex: byIndex, settings: settings };
 })();

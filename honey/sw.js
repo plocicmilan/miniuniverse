@@ -1,13 +1,14 @@
 /* Honey Toolbox — service worker (cache-first, offline) */
 "use strict";
 
-var CACHE = "honey-toolbox-v0.1.0";
+var CACHE = "honey-toolbox-v0.9.0";
 
 var PRECACHE = [
   "index.html",
   "css/app.css",
   "js/store.js",
   "js/app.js",
+  "js/xlsx.min.js",
   "config/honey_v1.json",
   "manifest.json"
 ];
