@@ -21,7 +21,7 @@ Svaka app je za drugačiji zanat/delatnost. Lista se produžava po potrebi.
 | App | Folder | Status | Tester | Live URL |
 |---|---|---|---|---|
 | Honey Toolbox | `honey/` | ✅ LIVE v0.9.1 | Nikola (pčelar) | `https://plocicmilan.github.io/miniuniverse/honey/` |
-| Work Order Snap | `work-order-snap/` | 🔧 MVP Faza 1 | — | deploy pending |
+| Work Order Snap | `_archive/work-order-snap/` | 📦 Arhiviran | — | — |
 
 ---
 

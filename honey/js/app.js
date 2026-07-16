@@ -2800,6 +2800,7 @@ function loadData() {
 /* ─── INIT ───────────────────────────────────────────────── */
 
 function init() {
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){});
   fetch("config/honey_v1.json").then(function (r) { return r.json(); }).then(function (cfg) {
     App._cfg = cfg;
   }).catch(function () {
